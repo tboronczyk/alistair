@@ -1,0 +1,21 @@
+{
+  "name": "boronczyk/alistair",
+  "type": "library",
+  "description": "pedagogical database wrapper and mvc-model starter kit",
+  "keywords": ["database", "PDO", "prepared-statements"],
+  "homepage": "https://github.com/tboronczyk/alistair",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Timothy Boronczyk",
+      "email": "tboronczyk@gmail.com"
+    }
+  ],
+  "require": {
+    "php": "^7.2",
+    "ext-pdo_mysql": "*"
+  },
+  "autoload": {
+    "psr-4": { "Boronczyk\\": "src/" }
+  }
+}
