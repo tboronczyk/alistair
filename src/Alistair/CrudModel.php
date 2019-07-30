@@ -147,19 +147,32 @@ abstract class CrudModel extends Model
      * sort direction may be specified by appending :ASC (default) or :DESC,
      * for example: ["colA:ASC", "colB:DESC"].
      *
-     * @param int $offset
-     * @param int $count
      * @param array $sort
+     * @param ?int $count
+     * @param ?int $offset
      * @return array
      * @throws \PDOException
      */
-    public function page(int $offset, int $count, array $sort): array
+    public function page(array $sort, ?int $count = null, ?int $offset = null): array
     {
+        if (is_null($count) && !is_null($offset)) {
+          throw new \InvalidArgumentException("count must be given when offset is present");
+        }
+
         $table = $this->table();
         $columns = $this->columnsAsList();
         $order = $this->filterSortAsList($sort);
 
-        $query = "SELECT id, $columns FROM $table ORDER BY $order LIMIT $offset, $count";
+        $query = "SELECT id, $columns FROM $table ORDER BY $order";
+
+        if (!is_null($count)) {
+            if (is_null($offset)) {
+                $query .= " LIMIT $count";
+            } else {
+                $query .= " LIMIT $offset, $count";
+            }
+        }
+
         return $this->queryRows($query);
     }
 
