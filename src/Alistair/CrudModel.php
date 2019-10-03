@@ -7,7 +7,7 @@ namespace Boronczyk\Alistair;
  * Class CrudModel
  * @package Boronczyk\Alistair
  */
-abstract class CrudModel extends Model
+abstract class CrudModel extends Model implements CrudInterface
 {
     /**
      * Return the list of column names.
@@ -177,7 +177,7 @@ abstract class CrudModel extends Model
     }
 
     /**
-     * Return a single record from the database by ID.
+     * Return a record from the database by ID.
      *
      * @param int $id
      * @return array
