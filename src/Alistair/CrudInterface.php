@@ -43,5 +43,4 @@ interface CrudInterface
      * @throws \PDOException
      */
     public function delete(int $id);
-
 }

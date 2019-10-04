@@ -156,7 +156,7 @@ abstract class CrudModel extends Model implements CrudInterface
     public function page(array $sort, ?int $count = null, ?int $offset = null): array
     {
         if (is_null($count) && !is_null($offset)) {
-          throw new \InvalidArgumentException("count must be given when offset is present");
+          throw new \InvalidArgumentException("count must be provided when offset is present");
         }
 
         $table = $this->table();
@@ -189,6 +189,7 @@ abstract class CrudModel extends Model implements CrudInterface
         $columns = $this->columnsAsList();
 
         $query = "SELECT id, $columns FROM $table WHERE id = ?";
+
         return $this->queryRow($query, [$id]);
     }
 
@@ -206,6 +207,7 @@ abstract class CrudModel extends Model implements CrudInterface
         $placeholders = $this->columnsAsPlaceholders();
 
         $query = "INSERT INTO $table (id, $columns) VALUES (NULL, $placeholders)";
+
         $this->query($query, $this->filterData($data));
 
         return (int)$this->db->lastInsertId();
@@ -222,6 +224,7 @@ abstract class CrudModel extends Model implements CrudInterface
         $table = $this->table();
 
         $query = "DELETE FROM $table WHERE id = ?";
+
         $this->query($query, [$id]);
     }
 
@@ -238,6 +241,7 @@ abstract class CrudModel extends Model implements CrudInterface
         $assign = $this->columnsAsAssign();
 
         $query = "UPDATE $table SET $assign WHERE id = :id";
+
         $data = array_merge($this->filterData($data), ['id' => $id]);
         $this->query($query, $data);
     }

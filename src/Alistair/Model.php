@@ -33,6 +33,7 @@ class Model
     {
         $stmt = $this->db->prepare($query);
         $stmt->execute($params);
+
         return $stmt;
     }
 
@@ -61,6 +62,7 @@ class Model
         $stmt = $this->stmt($query, $params);
         $rows = $stmt->fetchAll($this->db::FETCH_ASSOC);
         $stmt->closeCursor();
+
         return $rows;
     }
 
@@ -74,12 +76,11 @@ class Model
      */
     public function queryRow(string $query, ?array $params = null): array
     {
-        $rows = $this->queryRows($query, $params);
-        $row = reset($rows);
-        if ($row !== false) {
-            return $row;
-        }
-        return [];
+        $stmt = $this->stmt($query, $params);
+        $row = $stmt->fetch($this->db::FETCH_ASSOC);
+        $stmt->closeCursor();
+
+        return ($row === false) ? [] : $row;
     }
 
     /**
@@ -95,9 +96,7 @@ class Model
     {
         $row = $this->queryRow($query, $params);
         $value = reset($row);
-        if ($value !== false) {
-            return $value;
-        }
-        return null;
+
+        return ($value === false) ? null : $value;
     }
 }
