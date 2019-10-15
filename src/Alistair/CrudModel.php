@@ -7,7 +7,7 @@ namespace Boronczyk\Alistair;
  * Class CrudModel
  * @package Boronczyk\Alistair
  */
-abstract class CrudModel extends Model implements CrudInterface
+abstract class CrudModel extends DbAccess implements CrudModelInterface
 {
     /**
      * Return the list of column names.
@@ -141,36 +141,40 @@ abstract class CrudModel extends Model implements CrudInterface
     }
 
     /**
-     * Return paginated records from the database.
+     * Return records from the database.
+     *
+     * $sort, $count, and $offset are used for pagination.
      *
      * $sort is an array of column names by which the records are ordered. The
      * sort direction may be specified by appending :ASC (default) or :DESC,
      * for example: ["colA:ASC", "colB:DESC"].
      *
-     * @param array $sort
-     * @param ?int $count
-     * @param ?int $offset
+     * @param array $sort (optional, required if $count and $offset given)
+     * @param int $count (optional, required if $offset given)
+     * @param int $offset (optional)
      * @return array
      * @throws \PDOException
      */
-    public function page(array $sort, ?int $count = null, ?int $offset = null): array
+    public function get(array $sort = [], int $count = null, int $offset = null): array
     {
         if (is_null($count) && !is_null($offset)) {
-          throw new \InvalidArgumentException("count must be provided when offset is present");
+          throw new \InvalidArgumentException('$count must be provided when offset is given');
+        }
+
+        if (empty($sort) && !is_null($count)) {
+          throw new \InvalidArgumentException('$sort must be provided when count is given');
         }
 
         $table = $this->table();
         $columns = $this->columnsAsList();
-        $order = $this->filterSortAsList($sort);
+        $query = "SELECT id, $columns FROM $table";
 
-        $query = "SELECT id, $columns FROM $table ORDER BY $order";
+        if (!empty($sort)) {
+            $query .= ' ORDER BY ' . $this->filterSortAsList($sort);
+        }
 
         if (!is_null($count)) {
-            if (is_null($offset)) {
-                $query .= " LIMIT $count";
-            } else {
-                $query .= " LIMIT $offset, $count";
-            }
+            $query .= (is_null($offset)) ? " LIMIT $count" : " LIMIT $offset, $count";
         }
 
         return $this->queryRows($query);
@@ -183,7 +187,7 @@ abstract class CrudModel extends Model implements CrudInterface
      * @return array
      * @throws \PDOException
      */
-    public function byId(int $id): array
+    public function getById(int $id): array
     {
         $table = $this->table();
         $columns = $this->columnsAsList();

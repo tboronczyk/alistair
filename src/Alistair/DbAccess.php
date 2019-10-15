@@ -4,10 +4,10 @@ declare(strict_types=1);
 namespace Boronczyk\Alistair;
 
 /**
- * Class Model
+ * Class DbAccess
  * @package Boronczyk\Alistair
  */
-class Model
+class DbAccess implements DbAccessInterface
 {
     protected $db;
 
@@ -92,7 +92,7 @@ class Model
      * @return mixed
      * @throws \PDOException
      */
-    public function queryColumn(string $query, ?array $params = null) /*: mixed */
+    public function queryValue(string $query, ?array $params = null) /*: mixed */
     {
         $row = $this->queryRow($query, $params);
         $value = reset($row);
