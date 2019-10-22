@@ -45,7 +45,13 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
      */
     protected function columnsAsList(): string
     {
-        return join(', ', $this->columns());
+        $columns = array_map(
+            function ($column) {
+                return "`$column`";
+            },
+            $this->columns()
+        );
+        return join(', ', $columns);
     }
 
     /**
@@ -57,7 +63,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     {
         $assigns = array_map(
             function ($column) {
-                return "$column = :$column";
+                return "`$column` = :$column";
             },
             $this->columns()
         );
@@ -104,7 +110,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
                 $direction = 'ASC';
             }
 
-            $sort[$key] = "$column $direction";
+            $sort[$key] = "`$column` $direction";
         }
 
         return join(', ', $sort);
@@ -167,7 +173,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
 
         $table = $this->table();
         $columns = $this->columnsAsList();
-        $query = "SELECT id, $columns FROM $table";
+        $query = "SELECT id, $columns FROM `$table`";
 
         if (!empty($sort)) {
             $query .= ' ORDER BY ' . $this->filterSortAsList($sort);
@@ -192,7 +198,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         $table = $this->table();
         $columns = $this->columnsAsList();
 
-        $query = "SELECT id, $columns FROM $table WHERE id = ?";
+        $query = "SELECT id, $columns FROM `$table` WHERE id = ?";
 
         return $this->queryRow($query, [$id]);
     }
@@ -210,7 +216,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         $columns = $this->columnsAsList();
         $placeholders = $this->columnsAsPlaceholders();
 
-        $query = "INSERT INTO $table (id, $columns) VALUES (NULL, $placeholders)";
+        $query = "INSERT INTO `$table` (id, $columns) VALUES (NULL, $placeholders)";
 
         $this->query($query, $this->filterData($data));
 
@@ -227,7 +233,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     {
         $table = $this->table();
 
-        $query = "DELETE FROM $table WHERE id = ?";
+        $query = "DELETE FROM `$table` WHERE id = ?";
 
         $this->query($query, [$id]);
     }
@@ -244,7 +250,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         $table = $this->table();
         $assign = $this->columnsAsAssign();
 
-        $query = "UPDATE $table SET $assign WHERE id = :id";
+        $query = "UPDATE `$table` SET $assign WHERE id = :id";
 
         $data = array_merge($this->filterData($data), ['id' => $id]);
         $this->query($query, $data);
