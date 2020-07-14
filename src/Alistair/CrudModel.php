@@ -10,11 +10,34 @@ namespace Boronczyk\Alistair;
 abstract class CrudModel extends DbAccess implements CrudModelInterface
 {
     /**
-     * Return the list of column names.
+     * Return the list of available column names.
      *
      * @return string[]
      */
     abstract public function columns(): array;
+
+    /**
+     * Return the list of columns required to create or update a record.
+     *
+     * @return string[]
+     */
+    public function requiredColumns(): array
+    {
+        return $this->columns();
+    }
+
+    /**
+     * Return whether the given data contains all necessary columns to
+     * create/update a record.
+     *
+     * @param array $data
+     * @return bool
+     */
+    protected function hasRequiredFields(array $data): bool
+    {
+        $diff = array_diff($this->requiredColumns(), array_keys($data));
+        return (count($diff) == 0);
+    }
 
     /**
      * Return the table name.
@@ -29,158 +52,150 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     {
         $classname = (new \ReflectionClass($this))->getShortName();
 
-        return preg_replace_callback(
-            '/([A-Z]+)/',
-            function ($matches) {
-                return '_' . strtolower($matches[0]);
-            },
-            lcfirst($classname)
-        );
+        $classname = lcfirst($classname);
+
+        return preg_replace_callback('/([A-Z]+)/', function ($matches) {
+            return '_' . strtolower($matches[0]);
+        }, $classname);
     }
 
     /**
-     * Return the column names as a comma-separated list.
+     * Format column names as a comma-separated list.
      *
+     * @param array $columns
      * @return string
      */
-    protected function columnsAsList(): string
+    protected function columnsAsList(array $columns): string
     {
-        $columns = array_map(
-            function ($column) {
-                return "`$column`";
-            },
-            $this->columns()
-        );
-        return join(', ', $columns);
+        $cols = [];
+        foreach ($columns as $name) {
+            if ($name == '*') {
+                return '*';
+            }
+            $cols[] = "`$name`";
+        }
+
+        return join(', ', $cols);
     }
 
     /**
-     * Return the column names as a comma-separated list of assignment pairs.
+     * Format column names as a comma-separated list of assignment pairs.
      *
+     * @param array $columns
      * @return string
      */
-    protected function columnsAsAssign(): string
+    protected function columnsAsAssign(array $columns): string
     {
-        $assigns = array_map(
-            function ($column) {
-                return "`$column` = :$column";
-            },
-            $this->columns()
-        );
+        $assignments = array_map(function ($column) {
+            return "`$column` = :$column";
+        }, $columns);
 
-        return join(', ', $assigns);
+        return join(', ', $assignments);
     }
 
     /**
-     * Return the column names as a comma-separated list of placeholders.
+     * Format column names as a comma-separated list of placeholders.
      *
+     * @param array $columns
      * @return string
      */
-    protected function columnsAsPlaceholders(): string
+    protected function columnsAsPlaceholders(array $columns): string
     {
-        $columns = array_map(function ($column) {
+        $placeholders = array_map(function ($column) {
             return ":$column";
-        }, $this->columns());
+        }, $columns);
 
-        return join(', ', $columns);
+        return join(', ', $placeholders);
     }
 
     /**
-     * Remove unknown columns and return the specified sorting as a
-     * comma-separated list.
+     * Format the specified sorting as a comma-separated list.
      *
      * Sort direction is normalized to "ASC" and "DESC".
      *
-     * @param array $sort
+     * @param array $columns
      * @return string
      */
-    protected function filterSortAsList(array $sort): string
+    protected function sortAsList(array $columns): string
     {
-        $columns = $this->columns();
+        $sort = [];
+        foreach ($columns as $column) {
+            [$col, $direction] = explode(':', $column, 2);
 
-        foreach ($sort as $key => $column) {
-            [$column, $direction] = explode(':', $column, 2);
-            if (!in_array($column, $columns)) {
-                unset($sort[$key]);
-                continue;
-            }
-
-            $direction = strtoupper($direction);
+            $direction = strtoupper($direction ?? '');
             if ($direction != 'DESC') {
                 $direction = 'ASC';
             }
 
-            $sort[$key] = "`$column` $direction";
+            $sort[] = "`$col` $direction";
         }
 
         return join(', ', $sort);
     }
 
     /**
-     * Remove unknown values (keys) from the provided data.
+     * Remove unknown columns/keys from the provided data.
      *
      * @return array
      */
     protected function filterData(array $data): array
     {
         $columns = $this->columns();
-        return array_filter(
-            $data,
-            function ($key) use ($columns) {
-                return in_array($key, $columns);
-            },
-            ARRAY_FILTER_USE_KEY
-        );
-    }
 
-    /**
-     * Return whether the given data contains all necessary columns to
-     * create/update a record.
-     *
-     * @param array $data
-     * @return bool
-     */
-    public function hasRequiredFields(array $data): bool
-    {
-        $diff = array_diff($this->columns(), array_keys($data));
-        return (count($diff) == 0);
+        return array_filter($data, function ($key) use ($columns) {
+                return in_array($key, $columns);
+        }, ARRAY_FILTER_USE_KEY);
     }
 
     /**
      * Return records from the database.
      *
-     * $sort, $count, and $offset are used for pagination.
+     * $columns is an array of column names limiting the returned data.
      *
-     * $sort is an array of column names by which the records are ordered. The
+     * $sort is an array of column names by which the data is ordered. The
      * sort direction may be specified by appending :ASC (default) or :DESC,
-     * for example: ["colA:ASC", "colB:DESC"].
+     * for example: ["columnA:ASC", "columnB:DESC"].
      *
+     * $count and $offset are used for pagination.
+     *
+     * @param array $columns (optional)
      * @param array $sort (optional, required if $count and $offset given)
      * @param int $count (optional, required if $offset given)
      * @param int $offset (optional)
      * @return array
-     * @throws \PDOException
+     * @throws \InvalidArgumentException|\PDOException
      */
-    public function get(array $sort = [], int $count = null, int $offset = null): array
+    public function get(array $columns = null, array $sort = null, int $count = null, int $offset = null): array
     {
+        // ensure necessary arguments were provided
         if (is_null($count) && !is_null($offset)) {
-          throw new \InvalidArgumentException('$count must be provided when offset is given');
+          throw new \InvalidArgumentException('count must be provided when offset is given');
         }
 
-        if (empty($sort) && !is_null($count)) {
-          throw new \InvalidArgumentException('$sort must be provided when count is given');
+        if (is_null($sort) && !is_null($count)) {
+          throw new \InvalidArgumentException('sort must be provided when count is given');
         }
 
+        if (empty($columns)) {
+            $columns = $this->columns();
+        }
+        $columns[] = 'id'; // always include id
+        $columns = array_unique($columns);
+        
         $table = $this->table();
-        $columns = $this->columnsAsList();
-        $query = "SELECT id, $columns FROM `$table`";
+        $columns = $this->columnsAsList($columns);
+        $query = "SELECT $columns FROM `$table`";
 
         if (!empty($sort)) {
-            $query .= ' ORDER BY ' . $this->filterSortAsList($sort);
+            $query .= ' ORDER BY ' . $this->sortAsList($sort);
         }
 
         if (!is_null($count)) {
-            $query .= (is_null($offset)) ? " LIMIT $count" : " LIMIT $offset, $count";
+            $query .= " LIMIT $count";
+        }
+
+        if (!is_null($offset)) {
+            $query .= " OFFSET $offset";
         }
 
         return $this->queryRows($query);
@@ -190,15 +205,22 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
      * Return a record from the database by ID.
      *
      * @param int $id
+     * @param array $columns (optional)
      * @return array
      * @throws \PDOException
      */
-    public function getById(int $id): array
+    public function getById(int $id, array $columns = null): array
     {
-        $table = $this->table();
-        $columns = $this->columnsAsList();
+        if (empty($columns)) {
+            $columns = $this->columns();
+        }
+        $columns[] = 'id'; // always include id
+        $columns = array_unique($columns);
 
-        $query = "SELECT id, $columns FROM `$table` WHERE id = ?";
+        $table = $this->table();
+        $columns = $this->columnsAsList($columns);
+
+        $query = "SELECT $columns FROM `$table` WHERE `id` = ?";
 
         return $this->queryRow($query, [$id]);
     }
@@ -208,17 +230,31 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
      *
      * @param array $data
      * @return int
-     * @throws \PDOException
+     * @throws \InvalidArgumentException|\PDOException
      */
     public function create(array $data): int
     {
+        // extract known columns
+        $data = $this->filterData($data);
+
+        // id should not be set
+        if (array_key_exists('id', $data)) {
+            unset($data['id']);
+        }
+
+        // ensure necessary fields are provided
+        if (!$this->hasRequiredFields($data)) {
+            throw new \InvalidArgumentException('missing required fields');
+        }
+
         $table = $this->table();
-        $columns = $this->columnsAsList();
-        $placeholders = $this->columnsAsPlaceholders();
+        $columns = array_keys($data);
+        $columnlist = $this->columnsAsList($columns);
+        $placeholders = $this->columnsAsPlaceholders($columns);
 
-        $query = "INSERT INTO `$table` (id, $columns) VALUES (NULL, $placeholders)";
+        $query = "INSERT INTO `$table` (id, $columnlist) VALUES (NULL, $placeholders)";
 
-        $this->query($query, $this->filterData($data));
+        $this->query($query, $data);
 
         return (int)$this->db->lastInsertId();
     }
@@ -233,7 +269,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     {
         $table = $this->table();
 
-        $query = "DELETE FROM `$table` WHERE id = ?";
+        $query = "DELETE FROM `$table` WHERE `id` = ?";
 
         $this->query($query, [$id]);
     }
@@ -243,16 +279,29 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
      *
      * @param int $id
      * @param array $data
-     * @throws \PDOException
+     * @throws \InvalidArgumentException|\PDOException
      */
     public function update(int $id, array $data)
     {
+        // extract known columns
+        $data = $this->filterData($data);
+        
+        // id should not be set
+        if (array_key_exists('id', $data)) {
+            unset($data['id']);
+        }
+        
+        // ensure necessary fields are provided
+        if (!$this->hasRequiredFields($data)) {
+            throw new \InvalidArgumentException('missing required fields');
+        }
+
         $table = $this->table();
-        $assign = $this->columnsAsAssign();
+        $assign = $this->columnsAsAssign(array_keys($data));
 
         $query = "UPDATE `$table` SET $assign WHERE id = :id";
+        $data['id'] = $id;
 
-        $data = array_merge($this->filterData($data), ['id' => $id]);
         $this->query($query, $data);
     }
 }

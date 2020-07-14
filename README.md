@@ -1,8 +1,8 @@
 # Alistair
 
-Alistair is a simple SQL database wrapper for pedagogical purposes. It
-demonstrates how one can encapsulate common database operations and organize
-raw queries into MVC models.
+Alistair is a simple SQL database wrapper written for pedagogical purposes.
+It demonstrates how one can encapsulate common database operations and organize
+raw queries into a basis for MVC models.
 
 ## Classes
 
@@ -38,18 +38,28 @@ Methods defined by `DbAccessInterface`:
 
 ### CrudModel
 
-`CrudModel` is an abstract class that extends `DbAccess` to provide methods for CRUD
-operations (create, retrieve, update, delete). Implementations must provide `columns`
- method returning an array of valid column names.
+`CrudModel` is an abstract class that extends `DbAccess` to provide methods for
+CRUD operations (create, retrieve, update, delete). Implementations must
+implement the `columns` method returning an array of known column names for the
+table.
+
+Implementations may override the `table` method returning the name of the
+table (the base implementation derives the table name from the class's name).
+Implementations may also override the `requiredColumns` method returning an
+array of column names required to perform create and update operations if the
+list is different from that returned by `column`.
 
 Methods defined by `CrudModelInterface`:
 
-  * `hasRequiredFields` - whether the data contains all necessary columns
-  * `get` - return records, supports pagination
-  * `getById` - return a record by ID
-  * `create` - create a record
-  * `update` - update a record
-  * `delete` - delete a record
+  * `table` - return the table name
+  * `columns` - return a list of known column names
+  * `requiredColumns` - return a list of column names required to create or
+      update records
+  * `get` - return records, supports column filtering and pagination
+  * `getById` - return a record by ID, supports column filtering
+  * `create` - create a new record
+  * `update` - update an existing record
+  * `delete` - delete an existing record
 
 #### Example Usage
 
