@@ -148,6 +148,18 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
+     * Return the number of records in the table.
+     *
+     * @return int
+     * @throws \PDOException
+     */
+    public function count(): int
+    {
+        $table = $this->table();
+        return (int)$this->queryValue("SELECT COUNT(`id`) FROM `$table`");
+    }
+
+    /**
      * Return records from the database.
      *
      * $columns is an array of column names limiting the returned data.

@@ -35,6 +35,14 @@ interface CrudModelInterface
     public function table();
 
     /**
+     * Return the number of records in the table.
+     *
+     * @return int
+     * @throws \PDOException
+     */
+    public function count(): int;
+
+    /**
      * Return records from the database.
      *
      * $columns is an array of column names limiting the returned data.

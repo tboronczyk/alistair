@@ -55,6 +55,7 @@ Methods defined by `CrudModelInterface`:
   * `columns` - return a list of known column names
   * `requiredColumns` - return a list of column names required to create or
       update records
+  * `count` - return the number of records in the table
   * `get` - return records, supports column filtering and pagination
   * `getById` - return a record by ID, supports column filtering
   * `create` - create a new record

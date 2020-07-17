@@ -25,11 +25,11 @@ class DbAccess implements DbAccessInterface
      * Prepare and execute a prepared statement.
      *
      * @param string $query
-     * @param array|null $params
+     * @param array $params (optional)
      * @return \PDOStatement
      * @throws \PDOException
      */
-    protected function stmt(string $query, ?array $params = null): \PDOStatement
+    protected function stmt(string $query, array $params = null): \PDOStatement
     {
         $stmt = $this->db->prepare($query);
         $stmt->execute($params);
@@ -41,10 +41,10 @@ class DbAccess implements DbAccessInterface
      * Execute a query.
      *
      * @param string $query
-     * @param array|null $params
+     * @param array $params (optional)
      * @throws \PDOException
      */
-    public function query(string $query, ?array $params = null)
+    public function query(string $query, array $params = null)
     {
         $this->stmt($query, $params);
     }
@@ -53,11 +53,11 @@ class DbAccess implements DbAccessInterface
      * Execute a query and return the result rows.
      *
      * @param string $query
-     * @param array|null $params
+     * @param array $params (optional)
      * @return array
      * @throws \PDOException
      */
-    public function queryRows(string $query, ?array $params = null): array
+    public function queryRows(string $query, array $params = null): array
     {
         $stmt = $this->stmt($query, $params);
         $rows = $stmt->fetchAll($this->db::FETCH_ASSOC);
@@ -70,11 +70,11 @@ class DbAccess implements DbAccessInterface
      * Execute a query and return a single row.
      *
      * @param string $query
-     * @param array|null $params
+     * @param array $params (optional)
      * @return array
      * @throws \PDOException
      */
-    public function queryRow(string $query, ?array $params = null): array
+    public function queryRow(string $query, array $params = null): array
     {
         $stmt = $this->stmt($query, $params);
         $row = $stmt->fetch($this->db::FETCH_ASSOC);
@@ -88,11 +88,11 @@ class DbAccess implements DbAccessInterface
      * row.
      *
      * @param string $query
-     * @param array|null $params
+     * @param array $params (optional)
      * @return mixed
      * @throws \PDOException
      */
-    public function queryValue(string $query, ?array $params = null) /*: mixed */
+    public function queryValue(string $query, array $params = null) /*: mixed */
     {
         $row = $this->queryRow($query, $params);
         $value = reset($row);
