@@ -17,7 +17,8 @@
   },
   "require-dev": {
     "ext-pdo_sqlite": "*",
-    "phpunit/phpunit": "^9.5"
+    "phpunit/phpunit": "^9.5",
+    "phpstan/phpstan": "^0.12.85"
   },
   "autoload": {
     "psr-4": {
