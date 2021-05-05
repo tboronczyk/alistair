@@ -26,11 +26,11 @@ class DbAccess implements DbAccessInterface
      * Prepare and execute a prepared statement.
      *
      * @param string $query
-     * @param array $params (optional)
+     * @param ?array<int|string, mixed> $params (optional)
      * @return \PDOStatement
      * @throws \PDOException
      */
-    protected function stmt(string $query, array $params = null): \PDOStatement
+    protected function stmt(string $query, ?array $params): \PDOStatement
     {
         $stmt = $this->db->prepare($query);
         $stmt->execute($params);
@@ -42,11 +42,11 @@ class DbAccess implements DbAccessInterface
      * Execute a query.
      *
      * @param string $query
-     * @param array $params (optional)
+     * @param ?array<int|string, mixed> $params (optional)
      * @return void
      * @throws \PDOException
      */
-    public function query(string $query, array $params = null): void
+    public function query(string $query, ?array $params = null): void
     {
         $this->stmt($query, $params);
     }
@@ -55,18 +55,19 @@ class DbAccess implements DbAccessInterface
      * Execute a query and return the result rows.
      *
      * @param string $query
-     * @param array $params (optional)
-     * @param string $classname (optional)
-     * @return array
+     * @param ?array<int|string, mixed> $params (optional)
+     * @param ?string $classname (optional)
+     * @return array<array<string,string>>
      * @throws \PDOException
      */
-    public function queryRows(string $query, array $params = null, string $classname = null): array
+    public function queryRows(string $query, ?array $params = null, ?string $classname = null): array
     {
         $stmt = $this->stmt($query, $params);
 
         if ($classname == null) {
             $stmt->setFetchMode(\PDO::FETCH_ASSOC);
         } else {
+            /** @phpstan-ignore-next-line */
             $stmt->setFetchMode(\PDO::FETCH_CLASS, $classname);
         }
         $rows = $stmt->fetchAll();
@@ -79,18 +80,19 @@ class DbAccess implements DbAccessInterface
      * Execute a query and return a single row.
      *
      * @param string $query
-     * @param array $params (optional)
-     * @param string $classname (optional)
-     * @return array|object
+     * @param ?array<int|string, mixed> $params (optional)
+     * @param ?string $classname (optional)
+     * @return array<string,string>|object
      * @throws \PDOException
      */
-    public function queryRow(string $query, array $params = null, string $classname = null) /*: array|object */
+    public function queryRow(string $query, ?array $params = null, ?string $classname = null) /*: array|object */
     {
         $stmt = $this->stmt($query, $params);
 
         if ($classname == null) {
             $stmt->setFetchMode(\PDO::FETCH_ASSOC);
         } else {
+            /** @phpstan-ignore-next-line */
             $stmt->setFetchMode(\PDO::FETCH_CLASS, $classname);
         }
         $row = $stmt->fetch();
@@ -104,13 +106,13 @@ class DbAccess implements DbAccessInterface
      * row.
      *
      * @param string $query
-     * @param array $params (optional)
-     * @return mixed
+     * @param ?array<int|string, mixed> $params (optional)
+     * @return ?string
      * @throws \PDOException
      */
-    public function queryValue(string $query, array $params = null) /*: mixed */
+    public function queryValue(string $query, ?array $params = null): ?string 
     {
-        $row = $this->queryRow($query, $params);
+        $row = (array)$this->queryRow($query, $params);
         $value = reset($row);
 
         return (count($row)) ? $value : null;
