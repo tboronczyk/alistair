@@ -64,7 +64,7 @@ class DbAccess implements DbAccessInterface
         $rows = $stmt->fetchAll($this->db::FETCH_ASSOC);
         $stmt->closeCursor();
 
-        return $rows;
+        return ($rows === false) ? [] : $rows;
     }
 
     /**
@@ -98,6 +98,6 @@ class DbAccess implements DbAccessInterface
         $row = $this->queryRow($query, $params);
         $value = reset($row);
 
-        return ($value === false) ? null : $value;
+        return (count($row)) ? $value : null;
     }
 }
