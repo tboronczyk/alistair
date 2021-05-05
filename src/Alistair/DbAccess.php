@@ -56,13 +56,20 @@ class DbAccess implements DbAccessInterface
      *
      * @param string $query
      * @param array $params (optional)
+     * @param string $classname (optional)
      * @return array
      * @throws \PDOException
      */
-    public function queryRows(string $query, array $params = null): array
+    public function queryRows(string $query, array $params = null, string $classname = null): array
     {
         $stmt = $this->stmt($query, $params);
-        $rows = $stmt->fetchAll($this->db::FETCH_ASSOC);
+
+        if ($classname == null) {
+            $stmt->setFetchMode(\PDO::FETCH_ASSOC);
+        } else {
+            $stmt->setFetchMode(\PDO::FETCH_CLASS, $classname);
+        }
+        $rows = $stmt->fetchAll();
         $stmt->closeCursor();
 
         return ($rows === false) ? [] : $rows;
@@ -73,13 +80,20 @@ class DbAccess implements DbAccessInterface
      *
      * @param string $query
      * @param array $params (optional)
-     * @return array
+     * @param string $classname (optional)
+     * @return array|object
      * @throws \PDOException
      */
-    public function queryRow(string $query, array $params = null): array
+    public function queryRow(string $query, array $params = null, string $classname = null) /*: array|object */
     {
         $stmt = $this->stmt($query, $params);
-        $row = $stmt->fetch($this->db::FETCH_ASSOC);
+
+        if ($classname == null) {
+            $stmt->setFetchMode(\PDO::FETCH_ASSOC);
+        } else {
+            $stmt->setFetchMode(\PDO::FETCH_CLASS, $classname);
+        }
+        $row = $stmt->fetch();
         $stmt->closeCursor();
 
         return ($row === false) ? [] : $row;

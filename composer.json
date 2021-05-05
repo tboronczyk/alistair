@@ -20,6 +20,13 @@
     "phpunit/phpunit": "^9.5"
   },
   "autoload": {
-    "psr-4": { "Boronczyk\\": "src/" }
+    "psr-4": {
+      "Boronczyk\\Alistair\\": "src/Alistair"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Boronczyk\\Alistair\\Test\\": "tests"
+    }
   }
 }

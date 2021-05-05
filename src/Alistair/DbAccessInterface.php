@@ -25,20 +25,22 @@ interface DbAccessInterface
      *
      * @param string $query
      * @param array $params (optional)
+     * @param string $classname (optional)
      * @return array
      * @throws \PDOException
      */
-    public function queryRows(string $query, array $params = null): array;
+    public function queryRows(string $query, array $params = null, string $classname = null): array;
 
     /**
      * Execute a query and return a single row.
      *
      * @param string $query
      * @param array $params (optional)
-     * @return array
+     * @param string $classname (optional)
+     * @return array|object
      * @throws \PDOException
      */
-    public function queryRow(string $query, array $params = null): array;
+    public function queryRow(string $query, array $params = null, string $classname = null) /*: array|object */;
 
     /**
      * Execute a query and return the value of the first column of the first

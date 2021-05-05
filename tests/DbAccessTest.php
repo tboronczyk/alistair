@@ -7,7 +7,6 @@ namespace Boronczyk\Alistair\Test;
 error_reporting(E_ALL);
 ini_set('display_errors', '1');
 
-
 use PHPUnit\Framework\TestCase;
 use Boronczyk\Alistair\DbAccess;
 
@@ -77,6 +76,20 @@ final class DbAccessTest extends TestCase
         $this->assertEquals(['bar' => 'qwerty', 'baz' => 'asdfg'], $row);
     }
 
+    public function testQueryRowWithClassname(): void
+    {
+        $db = new DbAccess(self::$pdo);
+        $row = $db->queryRow(
+            'SELECT id, bar, baz FROM foo WHERE id = 1',
+            null,
+            FooModel::class
+        );
+
+        $this->assertEquals(1, $row->id);
+        $this->assertEquals('qwerty', $row->bar);
+        $this->assertEquals('asdfg', $row->baz);
+    }
+
     public function testQueryRowNoResults(): void
     {
         $db = new DbAccess(self::$pdo);
@@ -112,6 +125,24 @@ final class DbAccessTest extends TestCase
         $this->assertEquals(2, count($rows));
         $this->assertEquals(['id' => 1, 'bar' => 'qwerty', 'baz' => 'asdfg'], $rows[0]);
         $this->assertEquals(['id' => 2, 'bar' => 'dvorak', 'baz' => 'aoeui'], $rows[1]);
+    }
+
+    public function testQueryRowsWithClassname(): void
+    {
+        $db = new DbAccess(self::$pdo);
+        $rows = $db->queryRows(
+            'SELECT id, bar, baz FROM foo WHERE id IN (1, 2) ORDER BY id',
+            null,
+            FooModel::class
+        );
+
+        $this->assertEquals(2, count($rows));
+        $this->assertEquals(1, $rows[0]->id);
+        $this->assertEquals('qwerty', $rows[0]->bar);
+        $this->assertEquals('asdfg', $rows[0]->baz);
+        $this->assertEquals(2, $rows[1]->id);
+        $this->assertEquals('dvorak', $rows[1]->bar);
+        $this->assertEquals('aoeui', $rows[1]->baz);
     }
 
     public function testQueryRowsNoResults(): void
