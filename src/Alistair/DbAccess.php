@@ -9,7 +9,7 @@ namespace Boronczyk\Alistair;
  */
 class DbAccess implements DbAccessInterface
 {
-    protected $db;
+    protected \PDO $db;
 
     /**
      * Constructor
