@@ -14,9 +14,10 @@ interface DbAccessInterface
      *
      * @param string $query
      * @param array $params (optional)
+     * @return void
      * @throws \PDOException
      */
-    public function query(string $query, array $params = null);
+    public function query(string $query, array $params = null): void;
 
     /**
      * Execute a query and return the result rows.

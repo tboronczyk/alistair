@@ -42,9 +42,10 @@ class DbAccess implements DbAccessInterface
      *
      * @param string $query
      * @param array $params (optional)
+     * @return void
      * @throws \PDOException
      */
-    public function query(string $query, array $params = null)
+    public function query(string $query, array $params = null): void
     {
         $this->stmt($query, $params);
     }
