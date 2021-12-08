@@ -12,13 +12,13 @@
     }
   ],
   "require": {
-    "php": ">=7.2",
+    "php": "^8.0",
     "ext-pdo": "*"
   },
   "require-dev": {
     "ext-pdo_sqlite": "*",
     "phpunit/phpunit": "^9.5",
-    "phpstan/phpstan": "^0.12.85"
+    "phpstan/phpstan": "^1.2"
   },
   "autoload": {
     "psr-4": {
