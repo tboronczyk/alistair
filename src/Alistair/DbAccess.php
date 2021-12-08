@@ -10,20 +10,18 @@ namespace Boronczyk\Alistair;
  */
 class DbAccess implements DbAccessInterface
 {
-    protected \PDO $db;
-
     /**
      * Constructor
      *
-     * @param \PDO $db
+     * @param \PDO $pdo
      */
-    public function __construct(\PDO $db)
-    {
-        $this->db = $db;
+    public function __construct(
+        protected \PDO $pdo
+    ) {
     }
 
     /**
-     * Prepare and execute a prepared statement.
+     * Prepare and execute a prepared statement
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
@@ -32,14 +30,24 @@ class DbAccess implements DbAccessInterface
      */
     protected function stmt(string $query, ?array $params): \PDOStatement
     {
-        $stmt = $this->db->prepare($query);
+        $stmt = $this->pdo->prepare($query);
         $stmt->execute($params);
 
         return $stmt;
     }
 
     /**
-     * Execute a query.
+     * Return the underlying PDO connection object
+     *
+     * @return \PDO
+     */
+    public function getPdo(): \PDO
+    {
+        return $this->pdo;
+    }
+
+    /**
+     * Execute a query
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
@@ -52,12 +60,12 @@ class DbAccess implements DbAccessInterface
     }
 
     /**
-     * Execute a query and return the result rows.
+     * Execute a query and return the result rows
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
      * @param ?string $classname (optional)
-     * @return array<array<string,string>>
+     * @return array<array<string,string>|object>
      * @throws \PDOException
      */
     public function queryRows(string $query, ?array $params = null, ?string $classname = null): array
@@ -77,15 +85,15 @@ class DbAccess implements DbAccessInterface
     }
 
     /**
-     * Execute a query and return a single row.
+     * Execute a query and return a single row
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
      * @param ?string $classname (optional)
-     * @return array<string,string>|object
+     * @return array<string,string>|object|null
      * @throws \PDOException
      */
-    public function queryRow(string $query, ?array $params = null, ?string $classname = null) /*: array|object */
+    public function queryRow(string $query, ?array $params = null, ?string $classname = null): array|object|null
     {
         $stmt = $this->stmt($query, $params);
 
@@ -98,19 +106,19 @@ class DbAccess implements DbAccessInterface
         $row = $stmt->fetch();
         $stmt->closeCursor();
 
-        return ($row === false) ? [] : $row;
+        return ($row === false) ? null : $row;
     }
 
     /**
      * Execute a query and return the value of the first column of the first
-     * row.
+     * row
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
      * @return ?string
      * @throws \PDOException
      */
-    public function queryValue(string $query, ?array $params = null): ?string 
+    public function queryValue(string $query, ?array $params = null): ?string
     {
         $row = (array)$this->queryRow($query, $params);
         $value = reset($row);

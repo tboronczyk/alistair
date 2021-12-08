@@ -1,4 +1,5 @@
 <?php
+
 declare(strict_types=1);
 
 namespace Boronczyk\Alistair;
@@ -7,44 +8,30 @@ namespace Boronczyk\Alistair;
  * Class CrudModel
  * @package Boronczyk\Alistair
  */
-abstract class CrudModel extends DbAccess implements CrudModelInterface
+abstract class CrudModel implements CrudModelInterface
 {
     /**
-     * Return the list of available column names.
+     * Constructor
      *
-     * @return string[]
+     * @param DbAccess $db
+     */
+    public function __construct(
+        protected DbAccess $db
+    ) {
+    }
+
+    /**
+     * Return the list of available column names
+     *
+     * @return array<string>
      */
     abstract public function columns(): array;
 
     /**
-     * Return the list of columns required to create or update a record.
-     *
-     * @return string[]
-     */
-    public function requiredColumns(): array
-    {
-        return $this->columns();
-    }
-
-    /**
-     * Return whether the given data contains all necessary columns to
-     * create/update a record.
-     *
-     * @param array $data
-     * @return bool
-     */
-    protected function hasRequiredFields(array $data): bool
-    {
-        $diff = array_diff($this->requiredColumns(), array_keys($data));
-        return (count($diff) == 0);
-    }
-
-    /**
-     * Return the table name.
+     * Return the table name
      *
      * This implementation derives the table name by formatting the class
-     * name in snake_case. It is provided for convenience and can be
-     * overridden by child classes as necessary.
+     * name in snake_case.
      *
      * @return string
      */
@@ -54,15 +41,19 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
 
         $classname = lcfirst($classname);
 
-        return preg_replace_callback('/([A-Z]+)/', function ($matches) {
-            return '_' . strtolower($matches[0]);
-        }, $classname);
+        return (string)preg_replace_callback(
+            '/([A-Z]+)/',
+            function ($matches) {
+                return '_' . strtolower($matches[0]);
+            },
+            $classname
+        );
     }
 
     /**
-     * Format column names as a comma-separated list.
+     * Format column names as a comma-separated list
      *
-     * @param array $columns
+     * @param array<string> $columns
      * @return string
      */
     protected function columnsAsList(array $columns): string
@@ -79,9 +70,9 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
-     * Format column names as a comma-separated list of assignment pairs.
+     * Format column names as a comma-separated list of assignment pairs
      *
-     * @param array $columns
+     * @param array<string> $columns
      * @return string
      */
     protected function columnsAsAssign(array $columns): string
@@ -94,9 +85,9 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
-     * Format column names as a comma-separated list of placeholders.
+     * Format column names as a comma-separated list of placeholders
      *
-     * @param array $columns
+     * @param array<string> $columns
      * @return string
      */
     protected function columnsAsPlaceholders(array $columns): string
@@ -109,11 +100,11 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
-     * Format the specified sorting as a comma-separated list.
+     * Format the specified sorting as a comma-separated list
      *
      * Sort direction is normalized to "ASC" and "DESC".
      *
-     * @param array $columns
+     * @param array<string> $columns
      * @return string
      */
     protected function sortAsList(array $columns): string
@@ -122,7 +113,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         foreach ($columns as $column) {
             [$col, $direction] = explode(':', $column, 2);
 
-            $direction = strtoupper($direction ?? '');
+            $direction = strtoupper($direction);
             if ($direction != 'DESC') {
                 $direction = 'ASC';
             }
@@ -134,9 +125,10 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
-     * Remove unknown columns/keys from the provided data.
+     * Remove unknown columns/keys from the provided data
      *
-     * @return array
+     * @param array<string,mixed> $data
+     * @return array<string,mixed>
      */
     protected function filterData(array $data): array
     {
@@ -148,7 +140,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     }
 
     /**
-     * Return the number of records in the table.
+     * Return the number of records in the table
      *
      * @return int
      * @throws \PDOException
@@ -156,11 +148,40 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
     public function count(): int
     {
         $table = $this->table();
-        return (int)$this->queryValue("SELECT COUNT(`id`) FROM `$table`");
+        return (int)$this->db->queryValue("SELECT COUNT(`id`) FROM `$table`");
     }
 
     /**
-     * Return records from the database.
+     * Create a new record in the database and return the new record's ID
+     *
+     * @param array<string,mixed> $data
+     * @return int
+     * @throws \InvalidArgumentException|\PDOException
+     */
+    public function create(array $data): int
+    {
+        // extract known columns
+        $data = $this->filterData($data);
+
+        // id should not be set
+        if (array_key_exists('id', $data)) {
+            unset($data['id']);
+        }
+
+        $table = $this->table();
+        $columns = array_keys($data);
+        $columnlist = $this->columnsAsList($columns);
+        $placeholders = $this->columnsAsPlaceholders($columns);
+
+        $query = "INSERT INTO `$table` (id, $columnlist) VALUES (NULL, $placeholders)";
+
+        $this->db->query($query, $data);
+
+        return (int)$this->db->getPdo()->lastInsertId();
+    }
+
+    /**
+     * Return records from the database
      *
      * $columns is an array of column names limiting the returned data.
      *
@@ -170,22 +191,26 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
      *
      * $count and $offset are used for pagination.
      *
-     * @param array $columns (optional)
-     * @param array $sort (optional, required if $count and $offset given)
-     * @param int $count (optional, required if $offset given)
-     * @param int $offset (optional)
-     * @return array
+     * @param ?array<string> $columns (optional)
+     * @param ?array<string> $sort (optional, required if $count and $offset given)
+     * @param ?int $count (optional, required if $offset given)
+     * @param ?int $offset (optional)
+     * @return array<array<string,mixed>>
      * @throws \InvalidArgumentException|\PDOException
      */
-    public function get(array $columns = null, array $sort = null, int $count = null, int $offset = null): array
-    {
+    public function get(
+        ?array $columns = null,
+        ?array $sort = null,
+        ?int $count = null,
+        ?int $offset = null,
+    ): array {
         // ensure necessary arguments were provided
         if (is_null($count) && !is_null($offset)) {
-          throw new \InvalidArgumentException('count must be provided when offset is given');
+            throw new \InvalidArgumentException('count must be provided when offset is given');
         }
 
         if (is_null($sort) && !is_null($count)) {
-          throw new \InvalidArgumentException('sort must be provided when count is given');
+            throw new \InvalidArgumentException('sort must be provided when count is given');
         }
 
         if (empty($columns)) {
@@ -193,7 +218,7 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         }
         $columns[] = 'id'; // always include id
         $columns = array_unique($columns);
-        
+
         $table = $this->table();
         $columns = $this->columnsAsList($columns);
         $query = "SELECT $columns FROM `$table`";
@@ -210,19 +235,18 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
             $query .= " OFFSET $offset";
         }
 
-        return $this->queryRows($query);
+        return $this->db->queryRows($query);
     }
 
     /**
-     * Return a record from the database by ID.
+     * Return a record from the database by ID
      *
      * @param int $id
-     * @param array $columns (optional)
-     * @return array
+     * @param ?array<string> $columns (optional)
+     * @return array<string,string>
      * @throws \PDOException
      */
-    public function getById(int $id, array $columns = null): array
-    {
+    public function getById(int $id, ?array $columns = null): array {
         if (empty($columns)) {
             $columns = $this->columns();
         }
@@ -234,17 +258,18 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
 
         $query = "SELECT $columns FROM `$table` WHERE `id` = ?";
 
-        return $this->queryRow($query, [$id]);
+        return (array)$this->db->queryRow($query, [$id]);
     }
 
     /**
-     * Create a new record in the database and return the new record's ID.
+     * Update a record in the database
      *
-     * @param array $data
-     * @return int
+     * @param int $id
+     * @param array<string,mixed> $data
+     * @return void
      * @throws \InvalidArgumentException|\PDOException
      */
-    public function create(array $data): int
+    public function update(int $id, array $data): void
     {
         // extract known columns
         $data = $this->filterData($data);
@@ -252,60 +277,6 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         // id should not be set
         if (array_key_exists('id', $data)) {
             unset($data['id']);
-        }
-
-        // ensure necessary fields are provided
-        if (!$this->hasRequiredFields($data)) {
-            throw new \InvalidArgumentException('missing required fields');
-        }
-
-        $table = $this->table();
-        $columns = array_keys($data);
-        $columnlist = $this->columnsAsList($columns);
-        $placeholders = $this->columnsAsPlaceholders($columns);
-
-        $query = "INSERT INTO `$table` (id, $columnlist) VALUES (NULL, $placeholders)";
-
-        $this->query($query, $data);
-
-        return (int)$this->db->lastInsertId();
-    }
-
-    /**
-     * Delete a record from the database.
-     *
-     * @param int $id
-     * @throws \PDOException
-     */
-    public function delete(int $id)
-    {
-        $table = $this->table();
-
-        $query = "DELETE FROM `$table` WHERE `id` = ?";
-
-        $this->query($query, [$id]);
-    }
-
-    /**
-     * Update a record in the database.
-     *
-     * @param int $id
-     * @param array $data
-     * @throws \InvalidArgumentException|\PDOException
-     */
-    public function update(int $id, array $data)
-    {
-        // extract known columns
-        $data = $this->filterData($data);
-        
-        // id should not be set
-        if (array_key_exists('id', $data)) {
-            unset($data['id']);
-        }
-        
-        // ensure necessary fields are provided
-        if (!$this->hasRequiredFields($data)) {
-            throw new \InvalidArgumentException('missing required fields');
         }
 
         $table = $this->table();
@@ -314,6 +285,22 @@ abstract class CrudModel extends DbAccess implements CrudModelInterface
         $query = "UPDATE `$table` SET $assign WHERE id = :id";
         $data['id'] = $id;
 
-        $this->query($query, $data);
+        $this->db->query($query, $data);
+    }
+
+    /**
+     * Delete a record from the database
+     *
+     * @param int $id
+     * @return void
+     * @throws \PDOException
+     */
+    public function delete(int $id): void
+    {
+        $table = $this->table();
+
+        $query = "DELETE FROM `$table` WHERE `id` = ?";
+
+        $this->db->query($query, [$id]);
     }
 }

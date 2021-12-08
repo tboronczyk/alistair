@@ -11,7 +11,14 @@ namespace Boronczyk\Alistair;
 interface DbAccessInterface
 {
     /**
-     * Execute a query.
+     * Return the underlying PDO connection object
+     *
+     * @return \PDO
+     */
+    public function getPdo(): \PDO;
+
+    /**
+     * Execute a query
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
@@ -21,30 +28,30 @@ interface DbAccessInterface
     public function query(string $query, ?array $params = null): void;
 
     /**
-     * Execute a query and return the result rows.
+     * Execute a query and return the result rows
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
      * @param ?string $classname (optional)
-     * @return array<array<string,string>>
+     * @return array<array<string,string>|object>
      * @throws \PDOException
      */
     public function queryRows(string $query, ?array $params = null, ?string $classname = null): array;
 
     /**
-     * Execute a query and return a single row.
+     * Execute a query and return a single row
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)
      * @param ?string $classname (optional)
-     * @return array<string,string>|object
+     * @return array<string,string>|object|null
      * @throws \PDOException
      */
-    public function queryRow(string $query, ?array $params = null, ?string $classname = null) /*: array|object */;
+    public function queryRow(string $query, ?array $params = null, ?string $classname = null): array|object|null;
 
     /**
      * Execute a query and return the value of the first column of the first
-     * row.
+     * row
      *
      * @param string $query
      * @param ?array<int|string, mixed> $params (optional)

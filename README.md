@@ -2,7 +2,7 @@
 
 Alistair is a simple SQL database wrapper written for pedagogical purposes.
 It demonstrates how one can encapsulate common database operations and organize
-raw queries into a basis for MVC models.
+raw queries into a basis for MVC models/repositories.
 
 ## Classes
 
@@ -17,31 +17,38 @@ Methods defined by `DbAccessInterface`:
   * `queryRows` - execute a query and return result rows
   * `queryRow` - execute a query and return a single result row
   * `queryValue` - execute a query and return a single value
+  * `getPdo` - get the underlying PDO connection object
 
 #### Example Usage
     <?php
     use Boronczyk\Alistair\DbAccess;
 
-    class Users extends DbAccess
+    class Users
     {
-        public function getById(int $id): array {
-            return $this->queryRow(
-                'SELECT id, first_name, last_name, email FROM users WHERE id = ?',
+        public function __construct(
+            protected DbAccess $db
+        ) {
+        }
+
+        public function getById(int $id): array
+        {
+            return $this->db->queryRow(
+                'SELECT id, username, email FROM users WHERE id = ?',
                 [$id]
             );
         }
     }
 
-    $pdo = new \PDO(...);
-    $users = new Users($pdo);
+    $db = new DbAccess(new \PDO(...));
+
+    $users = new Users($db);
     $user = $users->getById(42);
 
 ### CrudModel
 
-`CrudModel` is an abstract class that extends `DbAccess` to provide methods for
-CRUD operations (create, retrieve, update, delete). Implementations must
-implement the `columns` method returning an array of known column names for the
-table.
+`CrudModel` is an abstract class that provides basic methods for CRUD
+operations (create, retrieve, update, delete). Implementations must implement
+the `columns` method returning an array of known column names for the table.
 
 Implementations may override the `table` method returning the name of the
 table (the base implementation derives the table name from the class's name).
@@ -53,8 +60,6 @@ Methods defined by `CrudModelInterface`:
 
   * `table` - return the table name
   * `columns` - return a list of known column names
-  * `requiredColumns` - return a list of column names required to create or
-      update records
   * `count` - return the number of records in the table
   * `get` - return records, supports column filtering and pagination
   * `getById` - return a record by ID, supports column filtering
@@ -65,6 +70,7 @@ Methods defined by `CrudModelInterface`:
 #### Example Usage
 
     <?php
+    use Boronczyk\Alistair\DbAccess;
     use Boronczyk\Alistair\CrudModel;
 
     class Users extends CrudModel
@@ -72,14 +78,14 @@ Methods defined by `CrudModelInterface`:
         // implementation required by abstract class
         public function columns(): array {
             return [
-                'first_name',
-                'last_name',
+                'username',
                 'email'
             ];
         }
     }
 
-    $pdo = new \PDO(...);
-    $users = new Users($pdo);
+    $db = new DbAccess(new \PDO(...));
+
+    $users = new Users($db);
     $user = $users->getById(42);
 
